@@ -130,7 +130,7 @@ export default function Dashboard() {
                       <div className="mt-0.5 rounded-lg bg-accent/20 p-2"><ClipboardList size={16} className="text-accent" /></div>
                       <div>
                         <p className="font-medium text-foreground">{t.judul}</p>
-                        <p className="text-sm text-muted-foreground flex items-center gap-1"><Calendar size={12} /> Deadline: {t.deadline}</p>
+                        <p className="text-sm text-muted-foreground flex items-center gap-1"><Calendar size={12} /> Deadline: {t.deadline?.split("T")[0]}</p>
                       </div>
                     </div>
                   ))}

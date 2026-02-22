@@ -151,7 +151,7 @@ export default function Tugas() {
                   <p className={`font-semibold text-foreground ${t.selesai ? "line-through opacity-50" : ""}`}>{t.judul}</p>
                   <p className="text-sm text-muted-foreground mt-0.5">{t.deskripsi}</p>
                   <div className="flex items-center gap-3 mt-2">
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground"><Calendar size={12} /> {t.deadline}</span>
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground"><Calendar size={12} />{t.deadline?.split("T")[0]}</span>
                     {isLate && <span className="rounded-full bg-destructive/10 text-destructive px-2 py-0.5 text-xs font-medium">Terlambat</span>}
                   </div>
                 </div>

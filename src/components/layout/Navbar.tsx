@@ -17,6 +17,7 @@ const navLinks = [
   { to: "/jadwal", label: "Jadwal" },
   { to: "/tugas", label: "Tugas" },
   { to: "/kelompok", label: "Kelompok" },
+  { to: "/karya", label: "Karya" },
   { to: "/infaq", label: "Infaq" },
   { to: "/chat", label: "Chat" },
 ];
