@@ -12,7 +12,7 @@ function getWeekType(): "ganjil" | "genap" {
   const now = new Date();
   const start = new Date(now.getFullYear(), 0, 1);
   const weekNum = Math.ceil(((now.getTime() - start.getTime()) / 86400000 + start.getDay() + 1) / 7);
-  return weekNum % 2 === 0 ? "genap" : "ganjil";
+  return weekNum % 2 === 0 ? "ganjil" : "genap";
 }
 
 function parseTime(jam: string): { start: number; end: number } | null {
