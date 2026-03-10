@@ -16,7 +16,7 @@ interface ChatMessage {
   reply_to_email?: string | null;
 }
 
-export default function FloatingChatButton() {
+export default function FloatingChatButton({ hidden = false }: { hidden?: boolean }) {
   const { user, loading: authLoading } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -170,7 +170,7 @@ export default function FloatingChatButton() {
   return (
     <>
       <motion.div
-        className="relative select-none">
+        className={`relative select-none transition-all duration-300 ${hidden ? "opacity-0 pointer-events-none scale-75" : ""}`}>
         {/* Chat Panel */}
         <AnimatePresence>
           {isOpen && (

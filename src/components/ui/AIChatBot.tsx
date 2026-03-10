@@ -312,7 +312,7 @@ function detectLinks(message: string, userMsg: string): { label: string; to: str
 // =============================================
 // MAIN COMPONENT
 // =============================================
-export default function AIChatBot() {
+export default function AIChatBot({ hidden = false }: { hidden?: boolean }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -491,6 +491,7 @@ export default function AIChatBot() {
       <button
         onClick={() => setOpen(true)}
         className="flex items-center justify-center rounded-full shadow-lg bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:shadow-xl transition-shadow w-14 h-14 relative group"
+        style={{ opacity: hidden ? 0 : 1, pointerEvents: hidden ? "none" : "auto", transform: hidden ? "scale(0.75)" : "scale(1)", transition: "all 0.3s" }}
       >
         <Bot size={22} />
         <div className="absolute right-16 top-1/2 -translate-y-1/2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap">

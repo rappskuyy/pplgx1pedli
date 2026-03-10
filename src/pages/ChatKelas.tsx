@@ -17,6 +17,64 @@ interface ChatMessage {
   reply_to_email?: string | null;
 }
 
+// ─── Date separator helpers ───────────────────────────────────────────────────
+
+// Returns "YYYY-MM-DD" in LOCAL timezone (bukan UTC), penting untuk WIB (UTC+7)
+function toLocalDateKey(dateStr: string): string {
+  const d = new Date(dateStr);
+  // getFullYear/getMonth/getDate sudah pakai local timezone browser
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function getLocalTodayKey(): string {
+  return toLocalDateKey(new Date().toISOString());
+}
+
+function getLocalYesterdayKey(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return toLocalDateKey(d.toISOString());
+}
+
+function getDateLabel(dateStr: string): string {
+  const key = toLocalDateKey(dateStr);
+  if (key === getLocalTodayKey()) return "Hari Ini";
+  if (key === getLocalYesterdayKey()) return "Kemarin";
+
+  const hariMap = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+  const bulanMap = [
+    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+    "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+  ];
+
+  const d = new Date(dateStr);
+  const dayName = hariMap[d.getDay()];
+  const date = d.getDate();
+  const month = bulanMap[d.getMonth()];
+  const year = d.getFullYear();
+  const currentYear = new Date().getFullYear();
+
+  if (year !== currentYear) return `${dayName}, ${date} ${month} ${year}`;
+  return `${dayName}, ${date} ${month}`;
+}
+
+// ─── Date Separator Component ─────────────────────────────────────────────────
+function DateSeparator({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3 my-4 px-2">
+      <div className="flex-1 h-px bg-border/60" />
+      <span className="text-[11px] font-medium text-muted-foreground/70 bg-muted/40 px-3 py-1 rounded-full border border-border/40 whitespace-nowrap">
+        {label}
+      </span>
+      <div className="flex-1 h-px bg-border/60" />
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 export default function ChatKelas() {
   const { user } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -156,6 +214,18 @@ export default function ChatKelas() {
     );
   }
 
+  // Build rendered items: interleave date separators between messages
+  const renderItems: Array<{ type: "separator"; label: string } | { type: "message"; msg: ChatMessage }> = [];
+  let lastDateKey = "";
+  for (const msg of messages) {
+    const key = toLocalDateKey(msg.created_at);
+    if (key !== lastDateKey) {
+      renderItems.push({ type: "separator", label: getDateLabel(msg.created_at) });
+      lastDateKey = key;
+    }
+    renderItems.push({ type: "message", msg });
+  }
+
   return (
     <PageTransition>
       {/* Clear Chat Confirmation Modal */}
@@ -181,13 +251,10 @@ export default function ChatKelas() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-foreground text-sm">Hapus Semua Chat?</h3>
-                  <p className="text-xs text-muted-foreground">Tindakan ini tidak bisa dibatalkan</p>
+                  <p className="text-xs text-muted-foreground">Semua pesan akan dihapus permanen</p>
                 </div>
               </div>
-              <p className="text-sm text-muted-foreground mb-5">
-                Semua pesan dalam chat kelas akan dihapus permanen untuk semua pengguna.
-              </p>
-              <div className="flex gap-2">
+              <div className="flex gap-2 mt-4">
                 <button
                   onClick={() => setShowClearConfirm(false)}
                   className="flex-1 rounded-xl border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
@@ -228,9 +295,11 @@ export default function ChatKelas() {
 
       <div className="max-w-3xl mx-auto flex flex-col rounded-2xl border border-border bg-card shadow-xl overflow-hidden" style={{ height: "65vh" }}>
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        <div className="flex-1 overflow-y-auto p-4 space-y-1">
           {loading ? (
-            <div className="flex justify-center py-12"><Loader2 className="animate-spin text-primary" size={28} /></div>
+            <div className="flex justify-center py-12">
+              <Loader2 className="animate-spin text-primary" size={28} />
+            </div>
           ) : messages.length === 0 ? (
             <div className="text-center py-12">
               <Smile size={40} className="mx-auto mb-3 text-muted-foreground/30" />
@@ -238,9 +307,24 @@ export default function ChatKelas() {
             </div>
           ) : (
             <AnimatePresence initial={false}>
-              {messages.map((msg) => {
+              {renderItems.map((item, index) => {
+                if (item.type === "separator") {
+                  return (
+                    <motion.div
+                      key={`sep-${index}`}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <DateSeparator label={item.label} />
+                    </motion.div>
+                  );
+                }
+
+                const msg = item.msg;
                 const isMe = msg.user_id === user.id;
                 const isDeleting = deletingId === msg.id;
+
                 return (
                   <motion.div
                     key={msg.id}

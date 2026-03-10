@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -31,7 +32,9 @@ const queryClient = new QueryClient({
   },
 });
 
-const App = () => (
+const App = () => {
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+  return (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
@@ -41,7 +44,7 @@ const App = () => (
           <Layout>
             <Routes>
               <Route path="/" element={<Dashboard />} />
-              <Route path="/siswa" element={<Siswa />} />
+              <Route path="/siswa" element={<Siswa onPanelChange={setIsPanelOpen} />} />
               <Route path="/jadwal" element={<Jadwal />} />
               <Route path="/tugas" element={<Tugas />} />
               <Route path="/infaq" element={<Infaq />} />
@@ -58,13 +61,14 @@ const App = () => (
           </Layout>
           {/* FAB Group — sejajar pojok kanan bawah */}
           <div className="fixed bottom-6 right-6 z-50 flex flex-col items-center gap-3">
-            <AIChatBot />
-            <FloatingChatButton />
+            <AIChatBot hidden={isPanelOpen} />
+            <FloatingChatButton hidden={isPanelOpen} />
           </div>
         </BrowserRouter>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
+};
 
 export default App;

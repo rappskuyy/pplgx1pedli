@@ -1,10 +1,13 @@
 import { useState } from "react";
-import { Search, User as UserIcon, Loader2, AlertCircle, Users } from "lucide-react";
+import { Search, User as UserIcon, Loader2, AlertCircle, Users, Bell } from "lucide-react";
 import { motion } from "framer-motion";
 import PageTransition from "@/components/PageTransition";
 import { useSiswa } from "@/hooks/use-supabase-data";
+import { useUnreadCounts } from "@/hooks/use-notifications";
 import SiswaDetailPanel from "@/components/ui/SiswaDetailPanel";
+import AdminNotifPanel from "@/components/ui/AdminNotifPanel";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/use-auth";
 
 const container = { hidden: {}, show: { transition: { staggerChildren: 0.05 } } };
 const item = { hidden: { opacity: 0, scale: 0.95 }, show: { opacity: 1, scale: 1 } };
@@ -21,13 +24,20 @@ interface SiswaProfile {
   instagram?: string | null;
   whatsapp?: string | null;
   motto?: string | null;
+  lagu_judul?: string | null;
+  lagu_artis?: string | null;
+  lagu_spotify?: string | null;
 }
 
-export default function Siswa() {
+export default function Siswa({ onPanelChange }: { onPanelChange?: (open: boolean) => void }) {
+  const { isAdmin } = useAuth();
   const [search, setSearch] = useState("");
   const [selectedSiswa, setSelectedSiswa] = useState<SiswaProfile | null>(null);
+  const [adminTarget, setAdminTarget] = useState<SiswaProfile | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
+
   const { data: siswaData = [], isLoading, isError, error } = useSiswa();
+  const { data: unreadCounts = {} } = useUnreadCounts();
 
   const filtered = siswaData.filter((s) =>
     s.nama?.toLowerCase().includes(search.toLowerCase()) ||
@@ -38,11 +48,18 @@ export default function Siswa() {
     setLoadingId(siswa.id);
     const { data } = await supabase
       .from("profiles")
-      .select("id, nama, gender, no_absen, avatar_url, badge, bio, hobi, instagram, whatsapp, motto")
+      .select("id, nama, gender, no_absen, avatar_url, badge, bio, hobi, instagram, whatsapp, motto, lagu_judul, lagu_artis, lagu_spotify")
       .eq("id", siswa.id)
       .single();
     setSelectedSiswa(data || siswa);
     setLoadingId(null);
+    onPanelChange?.(true);
+  };
+
+  const handleAdminNotif = (e: React.MouseEvent, siswa: SiswaProfile) => {
+    e.stopPropagation();
+    setAdminTarget(siswa);
+    onPanelChange?.(true);
   };
 
   return (
@@ -84,53 +101,81 @@ export default function Siswa() {
         </div>
       ) : (
         <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {filtered.map((s) => (
-            <motion.div
-              key={s.id}
-              variants={item}
-              onClick={() => handleCardClick(s)}
-              className="relative rounded-xl bg-card border border-border shadow-md overflow-hidden hover:scale-105 hover:shadow-lg transition-all cursor-pointer"
-            >
-              {/* Loading overlay */}
-              {loadingId === s.id && (
-                <div className="absolute inset-0 z-10 flex items-center justify-center bg-card/70 backdrop-blur-sm rounded-xl">
-                  <Loader2 size={20} className="animate-spin text-primary" />
-                </div>
-              )}
-
-              <span className="absolute top-3 right-3 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
-                {s.no_absen}
-              </span>
-              <div className="flex flex-col items-center p-6 pt-8">
-                <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-muted">
-                  {s.avatar_url ? (
-                    <img src={s.avatar_url} alt={s.nama} className="h-20 w-20 rounded-full object-cover" />
-                  ) : (
-                    <UserIcon size={32} className="text-muted-foreground" />
-                  )}
-                </div>
-                <p className="font-semibold text-foreground text-center">{s.nama}</p>
-                <span className={`mt-1 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                  s.gender === "L" ? "bg-primary/10 text-primary" : "bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300"
-                }`}>
-                  {s.gender === "L" ? "👦 Laki-laki" : "👧 Perempuan"}
-                </span>
-                {s.badge && (
-                  <span className="mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300">
-                    ⚡ {s.badge.toUpperCase()}
-                  </span>
+          {filtered.map((s) => {
+            const unread = unreadCounts[s.id] ?? 0;
+            return (
+              <motion.div
+                key={s.id}
+                variants={item}
+                onClick={() => handleCardClick(s)}
+                className="relative rounded-xl bg-card border border-border shadow-md overflow-hidden hover:scale-105 hover:shadow-lg transition-all cursor-pointer"
+              >
+                {loadingId === s.id && (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-card/70 backdrop-blur-sm rounded-xl">
+                    <Loader2 size={20} className="animate-spin text-primary" />
+                  </div>
                 )}
-                <p className="mt-3 text-[10px] text-muted-foreground/50">Tap untuk lihat profil</p>
-              </div>
-            </motion.div>
-          ))}
+
+                {/* Top bar: bell+badge (kiri) | no absen (kanan) */}
+                <div className="absolute top-2 left-2 right-2 z-10 flex items-center justify-between">
+                  {isAdmin ? (
+                    <div className="relative">
+                      <button
+                        onClick={(e) => handleAdminNotif(e, s)}
+                        title="Kirim notifikasi"
+                        className="flex h-6 w-6 items-center justify-center rounded-full bg-card/80 backdrop-blur-sm border border-border text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors shadow-sm"
+                      >
+                        <Bell size={11} />
+                      </button>
+                      {unread > 0 && (
+                        <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 px-0.5 items-center justify-center rounded-full bg-red-500 text-white text-[9px] font-bold shadow ring-1 ring-card pointer-events-none">
+                          {unread > 9 ? "9+" : unread}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span />
+                  )}
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                    {s.no_absen}
+                  </span>
+                </div>
+
+                <div className="flex flex-col items-center p-6 pt-8">
+                  <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-muted">
+                    {s.avatar_url ? (
+                      <img src={s.avatar_url} alt={s.nama} className="h-20 w-20 rounded-full object-cover" />
+                    ) : (
+                      <UserIcon size={32} className="text-muted-foreground" />
+                    )}
+                  </div>
+                  <p className="font-semibold text-foreground text-center">{s.nama}</p>
+                  <span className={`mt-1 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                    s.gender === "L" ? "bg-primary/10 text-primary" : "bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300"
+                  }`}>
+                    {s.gender === "L" ? "👦 Laki-laki" : "👧 Perempuan"}
+                  </span>
+                  {s.badge && (
+                    <span className="mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300">
+                      ⚡ {s.badge.toUpperCase()}
+                    </span>
+                  )}
+                  <p className="mt-3 text-[10px] text-muted-foreground/50">Tap untuk lihat profil</p>
+                </div>
+              </motion.div>
+            );
+          })}
         </motion.div>
       )}
 
-  {/* Slide Panel */}
       <SiswaDetailPanel
         siswa={selectedSiswa}
-        onClose={() => setSelectedSiswa(null)}
+        onClose={() => { setSelectedSiswa(null); if (!adminTarget) onPanelChange?.(false); }}
+      />
+
+      <AdminNotifPanel
+        siswa={isAdmin ? (adminTarget as any) : null}
+        onClose={() => { setAdminTarget(null); if (!selectedSiswa) onPanelChange?.(false); }}
       />
     </PageTransition>
   );

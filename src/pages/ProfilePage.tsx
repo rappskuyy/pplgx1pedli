@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Camera, Loader2, Save, User, Instagram, Phone, Heart, Sparkles, FileText, CheckCircle } from "lucide-react";
+import { Camera, Loader2, Save, User, Instagram, Phone, Heart, Sparkles, FileText, CheckCircle, Music2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import PageTransition from "@/components/PageTransition";
 import { useAuth } from "@/hooks/use-auth";
@@ -18,6 +18,9 @@ interface Profile {
   instagram: string | null;
   whatsapp: string | null;
   motto: string | null;
+  lagu_judul: string | null;
+  lagu_artis: string | null;
+  lagu_spotify: string | null;
 }
 
 export default function ProfilePage() {
@@ -35,6 +38,9 @@ export default function ProfilePage() {
     instagram: "",
     whatsapp: "",
     motto: "",
+    lagu_judul: "",
+    lagu_artis: "",
+    lagu_spotify: "",
   });
 
   useEffect(() => {
@@ -53,6 +59,9 @@ export default function ProfilePage() {
           instagram: data.instagram || "",
           whatsapp: data.whatsapp || "",
           motto: data.motto || "",
+          lagu_judul: data.lagu_judul || "",
+          lagu_artis: data.lagu_artis || "",
+          lagu_spotify: data.lagu_spotify || "",
         });
       }
       setLoading(false);
@@ -117,6 +126,9 @@ export default function ProfilePage() {
         instagram: form.instagram?.replace("@", "") || null,
         whatsapp: form.whatsapp || null,
         motto: form.motto || null,
+        lagu_judul: form.lagu_judul || null,
+        lagu_artis: form.lagu_artis || null,
+        lagu_spotify: form.lagu_spotify?.trim() || null,
       })
       .eq("id", user.id);
 
@@ -272,6 +284,54 @@ export default function ProfilePage() {
               type="tel"
               className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
             />
+          </div>
+
+
+          {/* Lagu Favorit */}
+          <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
+            <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <Music2 size={15} className="text-green-500" /> Lagu Favorit
+            </label>
+
+            {/* Preview Spotify embed jika ada link */}
+            {form.lagu_spotify && (() => {
+              const match = form.lagu_spotify.match(/track\/([a-zA-Z0-9]+)/);
+              return match ? (
+                <iframe
+                  src={`https://open.spotify.com/embed/track/${match[1]}?utm_source=generator&theme=0`}
+                  width="100%"
+                  height="80"
+                  frameBorder="0"
+                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                  loading="lazy"
+                  className="rounded-xl"
+                />
+              ) : null;
+            })()}
+
+            <input
+              value={form.lagu_judul}
+              onChange={(e) => setForm({ ...form, lagu_judul: e.target.value })}
+              placeholder="Judul lagu..."
+              maxLength={80}
+              className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-green-500/30 transition-all"
+            />
+            <input
+              value={form.lagu_artis}
+              onChange={(e) => setForm({ ...form, lagu_artis: e.target.value })}
+              placeholder="Nama artis / band..."
+              maxLength={80}
+              className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-green-500/30 transition-all"
+            />
+            <div>
+              <input
+                value={form.lagu_spotify}
+                onChange={(e) => setForm({ ...form, lagu_spotify: e.target.value })}
+                placeholder="Link Spotify (opsional) — https://open.spotify.com/track/..."
+                className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-green-500/30 transition-all"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Paste link lagu dari Spotify untuk embed player</p>
+            </div>
           </div>
 
           {/* Save Button */}

@@ -95,18 +95,13 @@ export function useSiswa() {
   return useQuery({
     queryKey: ["siswa"],
     queryFn: async () => {
-      try {
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("id, nama, gender, no_absen, avatar_url, badge")
-          .order("no_absen");
-        if (error) throw error;
-        if (data && data.length > 0) return data as Siswa[];
-        return mockSiswa as unknown as Siswa[];
-      } catch (err) {
-        console.warn("Supabase fetch failed, using mock data:", err);
-        return mockSiswa as unknown as Siswa[];
-      }
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, nama, gender, no_absen, avatar_url, badge")
+        .order("no_absen");
+      if (error) throw error;
+      // Kembalikan data Supabase meskipun kosong — jangan fallback ke mock
+      return (data ?? []) as Siswa[];
     },
   });
 }

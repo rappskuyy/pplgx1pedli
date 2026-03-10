@@ -6,19 +6,16 @@ import { useSchedules } from "@/hooks/use-supabase-data";
 
 const daysOfWeek = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat"];
 
-// Function untuk detect minggu berdasarkan nomor minggu ISO
+// Sama persis dengan ScheduleNotification.tsx getWeekType()
 function getMingguAkademik(date: Date): "ganjil" | "genap" {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-  return weekNo % 2 !== 0 ? "ganjil" : "genap";
+  const start = new Date(date.getFullYear(), 0, 1);
+  const weekNum = Math.ceil(((date.getTime() - start.getTime()) / 86400000 + start.getDay() + 1) / 7);
+  return weekNum % 2 === 0 ? "ganjil" : "genap";
 }
 
 export default function Jadwal() {
   const today = new Date();
-  const [minggu, setMinggu] = useState<"ganjil" | "genap">(getMingguAkademik(today));
+  const [minggu, setMinggu] = useState<"ganjil" | "genap">(() => getMingguAkademik(new Date()));
   const initialHari = (() => {
     const dow = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
     return dow >= 1 && dow <= 5 ? daysOfWeek[dow - 1] : "Senin";
@@ -34,8 +31,8 @@ export default function Jadwal() {
         <h1 className="text-3xl font-bold text-foreground mb-2">Jadwal Pelajaran</h1>
         <p className="text-muted-foreground">Jadwal pelajaran rombel PPLG X-1</p>
         <div className="flex justify-center gap-2 mt-3">
-          <span className="text-xs px-3 py-1 rounded-full bg-card text-muted-foreground border border-border">Minggu: {minggu === "ganjil" ? "Ganjil" : "Genap"}</span>
-          <span className="text-xs px-3 py-1 rounded-full bg-card text-muted-foreground border border-border">Hari: {hari}</span>
+          <span className="text-xs px-3 py-1 rounded-full bg-card text-muted-foreground border border-border">Minggu: {getMingguAkademik(today) === "ganjil" ? "Ganjil" : "Genap"}</span>
+          <span className="text-xs px-3 py-1 rounded-full bg-card text-muted-foreground border border-border">Hari: {initialHari}</span>
         </div>
       </div>
 

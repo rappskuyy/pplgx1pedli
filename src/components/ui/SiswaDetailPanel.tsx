@@ -1,4 +1,4 @@
-import { X, Instagram, Phone, Heart, Sparkles, FileText, User, ExternalLink } from "lucide-react";
+import { X, Instagram, Phone, Heart, Sparkles, FileText, User, ExternalLink, Music2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface SiswaProfile {
@@ -13,6 +13,9 @@ interface SiswaProfile {
   instagram?: string | null;
   whatsapp?: string | null;
   motto?: string | null;
+  lagu_judul?: string | null;
+  lagu_artis?: string | null;
+  lagu_spotify?: string | null;
 }
 
 interface SiswaDetailPanelProps {
@@ -36,11 +39,28 @@ const getColor = (nama: string) => {
   return colors[Math.abs(hash) % colors.length];
 };
 
+// Marquee animation injected via style tag
+const MarqueeStyle = () => (
+  <style>{`
+    @keyframes marquee {
+      0% { transform: translateX(0); }
+      10% { transform: translateX(0); }
+      90% { transform: translateX(calc(-100% - 1rem)); }
+      100% { transform: translateX(calc(-100% - 1rem)); }
+    }
+    .animate-marquee {
+      display: inline-block;
+      animation: marquee 7s linear infinite alternate;
+    }
+  `}</style>
+);
+
 export default function SiswaDetailPanel({ siswa, onClose }: SiswaDetailPanelProps) {
   return (
     <AnimatePresence>
       {siswa && (
         <>
+          <MarqueeStyle />
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -71,15 +91,15 @@ export default function SiswaDetailPanel({ siswa, onClose }: SiswaDetailPanelPro
               <p className="text-white/80 text-sm mt-0.5">{siswa.gender === "L" ? "Laki-laki" : "Perempuan"}</p>
               {siswa.badge && (
                 <span className="inline-flex items-center gap-1 mt-2 rounded-full bg-gradient-to-r from-yellow-400 to-amber-500 px-2.5 py-0.5 text-xs font-bold text-yellow-900 shadow-md">
-              👑 {siswa.badge.toUpperCase()}
-            </span>
+                  👑 {siswa.badge.toUpperCase()}
+                </span>
               )}
             </div>
 
-            {/* Avatar — overlap header */}
-            <div className="relative px-6">
-              <div className="absolute -top-10 left-6">
-                <div className="h-20 w-20 rounded-2xl overflow-hidden ring-4 ring-card shadow-xl">
+            {/* Avatar + Lagu pill — overlap header */}
+            <div className="relative px-6 h-12">
+              <div className="absolute -top-10 left-6 flex items-center gap-3">
+                <div className="h-20 w-20 shrink-0 rounded-2xl overflow-hidden ring-4 ring-card shadow-xl">
                   {siswa.avatar_url ? (
                     <img src={siswa.avatar_url} alt={siswa.nama} className="h-full w-full object-cover" />
                   ) : (
@@ -88,6 +108,26 @@ export default function SiswaDetailPanel({ siswa, onClose }: SiswaDetailPanelPro
                     </div>
                   )}
                 </div>
+                {(siswa.lagu_judul || siswa.lagu_artis) && (
+                  <div className="flex items-center gap-2 rounded-full bg-card border border-border shadow-md px-3 py-1.5 w-[180px]">
+                    <Music2 size={12} className="text-green-500 shrink-0" />
+                    <div className="flex-1 min-w-0 overflow-hidden">
+                      <div className="overflow-hidden">
+                        <p className="text-xs font-semibold text-foreground leading-tight whitespace-nowrap animate-marquee">
+                          {siswa.lagu_judul}
+                        </p>
+                      </div>
+                      {siswa.lagu_artis && (
+                        <p className="text-[10px] text-muted-foreground truncate leading-tight">{siswa.lagu_artis}</p>
+                      )}
+                    </div>
+                    {siswa.lagu_spotify && (
+                      <a href={siswa.lagu_spotify} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="shrink-0 text-green-500 hover:text-green-400 transition-colors">
+                        <ExternalLink size={10} />
+                      </a>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -179,7 +219,7 @@ export default function SiswaDetailPanel({ siswa, onClose }: SiswaDetailPanelPro
                 </div>
               )}
 
-              {/* Empty state kalau belum isi profil */}
+              {/* Empty state */}
               {!siswa.bio && !siswa.hobi && !siswa.instagram && !siswa.whatsapp && !siswa.motto && (
                 <div className="flex flex-col items-center py-8 text-center text-muted-foreground">
                   <User size={36} className="mb-2 opacity-30" />

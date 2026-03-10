@@ -1,12 +1,14 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Moon, Sun, Menu, X, LogOut, LogIn, User } from "lucide-react";
+import { Moon, Sun, Menu, X, LogOut, LogIn, User, Bell, Info, AlertTriangle, Star } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
 import { useAuth } from "@/hooks/use-auth";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import ScheduleNotification from "@/components/ScheduleNotification";
+import { useNotifications, useMarkAllRead } from "@/hooks/use-notifications";
 import { supabase } from "@/lib/supabase";
+
 
 const navLinks = [
   { to: "/", label: "Dashboard" },
@@ -21,6 +23,14 @@ const navLinks = [
   { to: "/infaq", label: "Infaq" },
 ];
 
+const TIPE_CONFIG = {
+  info: { icon: Info, color: "text-blue-500", bg: "bg-blue-50 dark:bg-blue-900/20", border: "border-blue-200 dark:border-blue-800" },
+  peringatan: { icon: AlertTriangle, color: "text-red-500", bg: "bg-red-50 dark:bg-red-900/20", border: "border-red-200 dark:border-red-800" },
+  pujian: { icon: Star, color: "text-yellow-500", bg: "bg-yellow-50 dark:bg-yellow-900/20", border: "border-yellow-200 dark:border-yellow-800" },
+} as const;
+
+
+
 export default function Navbar() {
   const { isDark, toggle } = useTheme();
   const { user, signOut } = useAuth();
@@ -28,11 +38,17 @@ export default function Navbar() {
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [namaUser, setNamaUser] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
 
-  // Fetch avatar & nama user yang login
+  const { data: myNotifs = [] } = useNotifications(user?.id ?? null);
+  const markAllRead = useMarkAllRead();
+  const unreadCount = myNotifs.filter((n: any) => !n.dibaca).length;
+
+  // Fetch avatar & nama
   useEffect(() => {
     if (!user) { setAvatarUrl(null); setNamaUser(null); return; }
     supabase
@@ -54,10 +70,24 @@ export default function Navbar() {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setDropdownOpen(false);
       }
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
+      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  // Saat notif panel dibuka → tandai semua dibaca
+  const handleOpenNotif = () => {
+    setNotifOpen((prev) => {
+      if (!prev && unreadCount > 0) {
+        if (user?.id) markAllRead.mutate(user.id);
+      }
+      return !prev;
+    });
+    setDropdownOpen(false);
+  };
 
   const handleLogout = async () => {
     setDropdownOpen(false);
@@ -102,54 +132,118 @@ export default function Navbar() {
           </button>
 
           {user ? (
-            /* Avatar dropdown */
-            <div className="relative" ref={dropdownRef}>
-              <button
-                onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="flex h-9 w-9 items-center justify-center rounded-full overflow-hidden ring-2 ring-border hover:ring-primary transition-all"
-              >
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt={namaUser || "profil"} className="h-full w-full object-cover" />
-                ) : (
-                  <div className="h-full w-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-bold">
-                    {namaUser?.charAt(0).toUpperCase() ?? <User size={16} />}
-                  </div>
-                )}
-              </button>
-
-              <AnimatePresence>
-                {dropdownOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: -5 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: -5 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute right-0 mt-2 w-48 rounded-xl bg-card border border-border shadow-xl overflow-hidden z-50"
-                  >
-                    {/* Info user */}
-                    <div className="px-4 py-3 border-b border-border">
-                      <p className="text-xs text-muted-foreground">Login sebagai</p>
-                      <p className="text-sm font-semibold text-foreground truncate">{namaUser ?? user.email}</p>
+            <>
+              {/* ===== AVATAR + BADGE NOTIF ===== */}
+              <div className="relative" ref={notifRef}>
+                <button
+                  onClick={handleOpenNotif}
+                  className="flex h-9 w-9 items-center justify-center rounded-full overflow-hidden ring-2 ring-border hover:ring-primary transition-all focus:outline-none"
+                  title="Notifikasi saya"
+                >
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt={namaUser || "profil"} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="h-full w-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-bold">
+                      {namaUser?.charAt(0).toUpperCase() ?? <User size={16} />}
                     </div>
-                    {/* Edit profil */}
-                    <Link
-                      to="/profile"
-                      onClick={() => setDropdownOpen(false)}
-                      className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
-                    >
-                      <User size={15} className="text-primary" /> Edit Profil
-                    </Link>
-                    {/* Logout */}
-                    <button
-                      onClick={handleLogout}
-                      className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-destructive hover:bg-destructive/10 transition-colors"
-                    >
-                      <LogOut size={15} /> Logout
-                    </button>
-                  </motion.div>
+                  )}
+                </button>
+                {/* Badge merah — di luar button, tidak overlap wajah */}
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 min-w-4 px-0.5 items-center justify-center rounded-full bg-red-500 text-white text-[9px] font-bold ring-2 ring-card z-10 pointer-events-none">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
                 )}
-              </AnimatePresence>
-            </div>
+
+                {/* Dropdown notifikasi */}
+                <AnimatePresence>
+                  {notifOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: -5 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: -5 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 mt-2 w-80 rounded-xl bg-card border border-border shadow-xl overflow-hidden z-50"
+                    >
+                      {/* Header notif */}
+                      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                        <div className="flex items-center gap-2">
+                          <Bell size={15} className="text-primary" />
+                          <p className="text-sm font-semibold text-foreground">Notifikasi</p>
+                        </div>
+                        {myNotifs.length > 0 && (
+                          <span className="text-xs text-muted-foreground">{myNotifs.length} pesan</span>
+                        )}
+                      </div>
+
+                      {/* List notif */}
+                      <div className="max-h-80 overflow-y-auto">
+                        {myNotifs.length === 0 ? (
+                          <div className="flex flex-col items-center py-8 text-muted-foreground">
+                            <Bell size={28} className="mb-2 opacity-25" />
+                            <p className="text-sm">Tidak ada notifikasi</p>
+                          </div>
+                        ) : (
+                          <div className="p-2 space-y-1.5">
+                            {myNotifs.map((notif: any) => {
+                              const cfg = TIPE_CONFIG[notif.tipe as keyof typeof TIPE_CONFIG] ?? TIPE_CONFIG.info;
+                              const Icon = cfg.icon;
+                              return (
+                                <div
+                                  key={notif.id}
+                                  className={`flex items-start gap-3 rounded-lg p-3 border transition-colors ${
+                                    !notif.dibaca
+                                      ? `${cfg.bg} ${cfg.border}`
+                                      : "border-transparent hover:bg-muted/50"
+                                  }`}
+                                >
+                                  <span className={`mt-0.5 shrink-0 ${cfg.color}`}>
+                                    <Icon size={15} />
+                                  </span>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5">
+                                      <p className="text-sm font-semibold text-foreground leading-tight">{notif.judul}</p>
+                                      {!notif.dibaca && (
+                                        <span className="shrink-0 h-1.5 w-1.5 rounded-full bg-red-500" />
+                                      )}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{notif.pesan}</p>
+                                    <p className="text-[10px] text-muted-foreground/60 mt-1">
+                                      {new Date(notif.created_at).toLocaleDateString("id-ID", {
+                                        day: "numeric", month: "short",
+                                        hour: "2-digit", minute: "2-digit"
+                                      })}
+                                    </p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Footer — link ke profil & logout */}
+                      <div className="border-t border-border">
+                        <Link
+                          to="/profile"
+                          onClick={() => setNotifOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted transition-colors"
+                        >
+                          <User size={14} className="text-primary" /> Edit Profil
+                        </Link>
+                        <button
+                          onClick={() => { setNotifOpen(false); handleLogout(); }}
+                          className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+                        >
+                          <LogOut size={14} /> Logout
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+            </>
           ) : (
             <Link
               to="/login"
